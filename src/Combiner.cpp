@@ -194,52 +194,38 @@ void SimplifyCycle( CombineCycle *cc, CombinerStage *stage )
 	}
 }
 
-graphics::CombinerProgram * Combiner_Compile(CombinerKey key)
+graphics::CombinerProgram* Combiner_Compile(u64 mux)
 {
 	gDPCombine combine;
 
-	combine.mux = key.getMux();
+	combine.mux = mux;
+
+	int numCycles;
 
 	Combiner color, alpha;
 
-	const u32 cycleType = key.getCycleType();
-	const u32 numCycles = cycleType + 1;
+	numCycles = gDP.otherMode.cycleType + 1;
 	color.numStages = numCycles;
 	alpha.numStages = numCycles;
 
 	CombineCycle cc[2];
 	CombineCycle ac[2];
 
-	// Simplify each RDP combiner cycle into a combiner stage
-	if (cycleType == G_CYC_1CYCLE) {
-		// 1 cycle mode uses combiner equations from 2nd cycle
-		u32 colorMux[4] = { saRGBExpanded[combine.saRGB1], sbRGBExpanded[combine.sbRGB1],
-							mRGBExpanded[combine.mRGB1], aRGBExpanded[combine.aRGB1] };
-		// Check for 'combined' mux
-		for (u32 i = 0; i < 4; ++i) {
-			if (colorMux[i] == G_GCI_COMBINED || colorMux[i] == G_GCI_COMBINED_ALPHA)
-				colorMux[i] = G_GCI_ZERO;
-		}
-		cc[1].sa = colorMux[0];
-		cc[1].sb = colorMux[1];
-		cc[1].m = colorMux[2];
-		cc[1].a = colorMux[3];
-		SimplifyCycle(&cc[1], &color.stage[0]);
+	// Decode and expand the combine mode into a more general form
+	cc[0].sa = saRGBExpanded[combine.saRGB0];
+	cc[0].sb = sbRGBExpanded[combine.sbRGB0];
+	cc[0].m = mRGBExpanded[combine.mRGB0];
+	cc[0].a = aRGBExpanded[combine.aRGB0];
+	ac[0].sa = saAExpanded[combine.saA0];
+	ac[0].sb = sbAExpanded[combine.sbA0];
+	ac[0].m = mAExpanded[combine.mA0];
+	ac[0].a = aAExpanded[combine.aA0];
 
-		u32 alphaMux[4] = { saAExpanded[combine.saA1], sbAExpanded[combine.sbA1],
-			mAExpanded[combine.mA1], aAExpanded[combine.aA1] };
-		// Check for 'combined' mux
-		for (u32 i = 0; i < 4; ++i) {
-			if (alphaMux[i] == G_GCI_COMBINED)
-				alphaMux[i] = G_GCI_ZERO;
-		}
-		ac[1].sa = alphaMux[0];
-		ac[1].sb = alphaMux[1];
-		ac[1].m = alphaMux[2];
-		ac[1].a = alphaMux[3];
-		SimplifyCycle(&ac[1], &alpha.stage[0]);
-	} else {
-		// Decode and expand the combine mode into a more general form
+	SimplifyCycle(&cc[0], &color.stage[0]);
+	SimplifyCycle(&ac[0], &alpha.stage[0]);
+
+	// Simplify each RDP combiner cycle into a combiner stage
+	if (gDP.otherMode.cycleType == G_CYC_2CYCLE) {
 		cc[1].sa = saRGBExpanded[combine.saRGB1];
 		cc[1].sb = sbRGBExpanded[combine.sbRGB1];
 		cc[1].m = mRGBExpanded[combine.mRGB1];
@@ -249,29 +235,18 @@ graphics::CombinerProgram * Combiner_Compile(CombinerKey key)
 		ac[1].m = mAExpanded[combine.mA1];
 		ac[1].a = aAExpanded[combine.aA1];
 
-		cc[0].sa = saRGBExpanded[combine.saRGB0];
-		cc[0].sb = sbRGBExpanded[combine.sbRGB0];
-		cc[0].m = mRGBExpanded[combine.mRGB0];
-		cc[0].a = aRGBExpanded[combine.aRGB0];
-		ac[0].sa = saAExpanded[combine.saA0];
-		ac[0].sb = sbAExpanded[combine.sbA0];
-		ac[0].m = mAExpanded[combine.mA0];
-		ac[0].a = aAExpanded[combine.aA0];
-
-		SimplifyCycle(&cc[0], &color.stage[0]);
-		SimplifyCycle(&ac[0], &alpha.stage[0]);
-
 		const bool equalStages = (memcmp(cc, cc + 1, sizeof(CombineCycle)) | memcmp(ac, ac + 1, sizeof(CombineCycle))) == 0;
 		if (!equalStages) {
 			SimplifyCycle(&cc[1], &color.stage[1]);
 			SimplifyCycle(&ac[1], &alpha.stage[1]);
-		} else {
+		}
+		else {
 			color.numStages = 1;
 			alpha.numStages = 1;
 		}
 	}
 
-	return gfxContext.createCombinerProgram(color, alpha, key);
+	return gfxContext.createCombinerProgram(color, alpha, CombinerKey(mux));
 }
 
 void CombinerInfo::update()
@@ -299,7 +274,7 @@ void CombinerInfo::setCombine(u64 _mux )
 	if (iter != m_combiners.end()) {
 		m_pCurrent = iter->second;
 	} else {
-		m_pCurrent = Combiner_Compile(key);
+		m_pCurrent = Combiner_Compile(key.getMux());
 		m_pCurrent->update(true);
 		m_combiners[m_pCurrent->getKey()] = m_pCurrent;
 	}

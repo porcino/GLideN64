@@ -271,7 +271,7 @@ bool ShaderStorage::_loadFromCombinerKeys(graphics::Combiners & _combiners)
 		CombinerKey key(mux, false);
 		if (!useGlobalHWLSuport)
 			GBI.setHWLSupported(key.isHWLSupported());
-		graphics::CombinerProgram * pCombiner = Combiner_Compile(key);
+		graphics::CombinerProgram * pCombiner = Combiner_Compile(key.getMux());
 		pCombiner->update(true);
 		_combiners[pCombiner->getKey()] = pCombiner;
 		progress += step;
@@ -363,7 +363,7 @@ bool ShaderStorage::loadShadersStorage(graphics::Combiners & _combiners)
 				_combiners[pCombiner->getKey()] = pCombiner;
 			} else {
 				LOG(LOG_ERROR, "Shader is not a valid binary compiling from key instead");
-				graphics::CombinerProgram *pCombinerFromKey = Combiner_Compile(cmbKey);
+				graphics::CombinerProgram *pCombinerFromKey = Combiner_Compile(cmbKey.getMux());
 				pCombinerFromKey->update(true);
 				_combiners[cmbKey] = pCombinerFromKey;
 			}
