@@ -2056,7 +2056,7 @@ void gSPSprite2DBase(u32 _base)
 		f32 ult = pSprite->imageY;
 		f32 lrs = uls + pSprite->imageW;
 		f32 lrt = ult + pSprite->imageH;
-		if (GBI.getMicrocodeType() == F3D_Glover) {
+		if (scaleY != 1.0f) {
 			lrs -= 1.0f;
 			lrt -= 1.0f;
 		}
