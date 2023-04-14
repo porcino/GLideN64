@@ -10,7 +10,6 @@
 
 #define LOG_LEVEL LOG_NONE
 
-#if LOG_LEVEL > 0
 
 #include "Types.h"
 #include <cstdio>
@@ -29,11 +28,7 @@
 
 void LogDebug(const char* _fileName, int _line, u16 _type, const char* _format, ...);
 
-#else
 
-#define LOG(A, ...)
-
-#endif
 
 #if defined(OS_WINDOWS) && !defined(MINGW)
 void debugPrint(const char * format, ...);
