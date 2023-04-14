@@ -8,7 +8,7 @@
 #define LOG_VERBOSE 4
 #define LOG_APIFUNC 5
 
-#define LOG_LEVEL LOG_WARNING
+#define LOG_LEVEL LOG_NONE
 
 #if LOG_LEVEL > 0
 
